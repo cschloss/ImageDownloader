@@ -1,0 +1,165 @@
+//downLoadImagery_Beta20150213
+
+//Set the start date and enddate for the full time period you want images
+var startdate = new Date("October 1, 2013");
+var enddate = new Date("January 30, 2015");
+//Set the length and type of temporal units for each picture (e.g., 1 picture for every 1 month, 1 picture for every 15 days)
+var intervalType = 'month';
+var intervalLength = 1;
+//Set a base name for the image names
+var imageBaseName = "Romero";
+
+
+//--------------------
+/////CHOOSE DATA TYPE
+
+var imageType = 'NDVI'
+//var imageType = 'Raw'
+//var imageType = 'Wetness'
+//var imageType = 'NDWI'
+
+
+
+
+
+//---------------------
+//CHOOSE REGION
+//var North = 37.204081555898526  //Latitude 
+//var South = 36.767492156196745             //Latitude 
+//var East = -120.85235595703125          //Longitude
+//var West =  -121.805419921875            //Longitude
+
+var North = 37.17  //Latitude 
+var South = 37.099            //Latitude pr
+var East = -121.067          //Longitude
+var West =  -121.307           //Longitude
+
+
+var coords1 = '[[' + West + "," + North + '], ['+ West + "," + South + '], ['+ East + "," + South + '], ['+ East + "," + North + ']]';   
+//print(coords1);  
+
+
+
+//----------------------
+// IMAGERY SOURCES - LANDSAT
+// Code will use:
+//      -Landsat 5 if interval end date is before May 8 2012
+//      -Landsat 7 if interval end date is after May 9 2012 and interval start is after april 7 2013
+//      -Landsat 8 if interval start date is after April 7 2013
+var landsat8startDate =  new Date("April 7, 2013");
+var landsat5endDate =  new Date("May 8, 2012"); 
+
+
+//----------------------
+//A date function to increment dates by the temporal units given above
+function dateAdd(date, interval, units) {
+  var ret = new Date(date); //don't change original date
+  switch(interval.toLowerCase()) {
+    case 'year'   :  ret.setFullYear(ret.getFullYear() + units);  break;
+    case 'quarter':  ret.setMonth(ret.getMonth() + 3*units);  break;
+    case 'month'  :  ret.setMonth(ret.getMonth() + units);  break;
+    case 'week'   :  ret.setDate(ret.getDate() + 7*units);  break;
+    case 'day'    :  ret.setDate(ret.getDate() + units);  break;
+    case 'hour'   :  ret.setTime(ret.getTime() + units*3600000);  break;
+    case 'minute' :  ret.setTime(ret.getTime() + units*60000);  break;
+    case 'second' :  ret.setTime(ret.getTime() + units*1000);  break;
+    default       :  ret = undefined;  break;
+  }
+  return ret;
+}
+
+//a formatting function to convert a date to a text string for a filename (e.g. "2014_06_01")
+function dateFormat(date) {
+  var fYear = date.getFullYear();
+  var tempMonth = date.getMonth() + 1
+  var fMonth;
+  if (tempMonth<10) {
+    fMonth = "0"+tempMonth;
+  } else {
+    fMonth = tempMonth.toString();
+  }
+  var tempDate = date.getDate()
+  var fDate;
+  if (tempDate<10) {
+    fDate = "0"+tempDate;
+  } else {
+    fDate = tempDate.toString();
+  }
+  var fDateString = fYear.toString()+"_"+fMonth+"_"+fDate;
+  return fDateString;
+}
+
+
+//Establish variables for the loop
+var i;
+var intervalEndDate = startdate;
+print("Generating image URLs...")
+
+//Loop to iterate through the dates.  Loop continues while the end of the interval is less than the end date for the full period
+for (i=0;intervalEndDate < enddate;i=i+intervalLength) {
+  var intervalStartDate = dateAdd(startdate,intervalType,i);
+  var intervalEndDate = dateAdd(startdate,intervalType,i+intervalLength);
+  //print('START DATE  ' + intervalStartDate.toString());
+  //print('END DATE  ' + intervalEndDate.toString());
+
+  //Choose landsat 5, landsat 7, or landsat 8 based on interval range  
+  if (intervalStartDate > landsat8startDate) {
+      var landsatNum = "LC8";
+  } else if (intervalEndDate < landsat5endDate) {
+      var landsatNum = "LT5";
+  } else {
+     var landsatNum = "LE7";
+  }
+
+ //print(landsatNum);
+  
+  
+  //get image collection.  Note that Landsat 8 collection starts April 7th, 2013
+
+  switch(imageType) {
+      case 'NDVI':
+          var landsat8 = ee.ImageCollection('LANDSAT/' + landsatNum +'_L1T_8DAY_NDVI');
+          break;
+      case 'Raw':
+          var landsat8 = ee.ImageCollection('LANDSAT/' + landsatNum +'_L1T');
+          break;
+      case 'Wetness':
+          var landsat8 = ee.ImageCollection('LANDSAT/' + landsatNum +'_L1T');
+          break;
+      case 'NDWI':
+          var landsat8 = ee.ImageCollection('LANDSAT/' + landsatNum +'_L1T_8DAY_NDWI');
+          break;
+    }
+
+  
+  
+  //Filter the image collection to a smaller image collection based on the interval start and end date
+  var intervalImageCollection = landsat8.filterDate(intervalStartDate, intervalEndDate);
+  //Reduce the interval image collection to a single image using a median reducer
+  var median1 = intervalImageCollection.median();
+  //Set the bands to visualize the image
+  //var map1 = median1.visualize({'bands': ['B4', 'B3', 'B2'], 'min': 5000, 'max': 18000});
+  switch(imageType) {
+    case 'NDVI':
+        var NDVI_PALETTE = ['663300', 'CC7A00', 'B8B800', '009900'];
+        var map1 = median1.visualize({'bands': "NDVI", 'palette': NDVI_PALETTE});
+        break;
+    case 'Wetness':
+        var map1 = median1.visualize({'bands': ['B7', 'B5', 'B1'], 'min': 5000, 'max': 18000});
+        break;
+    case 'Raw':
+        var map1 = median1.visualize({'bands': ['B4', 'B3', 'B2'], 'min': 5000, 'max': 18000});
+        break;
+    case 'NDWI':
+        var NDWI_PALETTE = ['FFFFCC', '0066FF'];
+        var map1 = median1.visualize({'bands': "NDWI", 'palette': NDWI_PALETTE});
+        break;
+  }
+  //Generate file name for download
+  var imageName = imageBaseName+"_"+ imageType + "_" +dateFormat(intervalStartDate)+"_to_"+dateFormat(intervalEndDate);
+  //Generate a URL to download the image
+  var path = map1.getDownloadURL({'name':imageName, 'scale': 30, 'region': coords1, 'crs':'EPSG:4326', 'filePerBand': 'False'});
+  // gonzales zoom [[-121.493, 36.497], [-121.493, 36.464], [-121.44, 36.464], [-121.44, 36.497]]
+  // whole region '[[-121.59, 36.6], [-121.59, 36.4], [-121.38, 36.4], [-121.38, 36.6]]'
+  print(path);
+}
