@@ -17,6 +17,7 @@ var imageType = 'NDVI'
 //var imageType = 'Raw'
 //var imageType = 'Wetness'
 //var imageType = 'NDWI'
+var imageType = 'Veg'
 
 
 
@@ -24,15 +25,10 @@ var imageType = 'NDVI'
 
 //---------------------
 //CHOOSE REGION
-//var North = 37.204081555898526  //Latitude 
-//var South = 36.767492156196745             //Latitude 
-//var East = -120.85235595703125          //Longitude
-//var West =  -121.805419921875            //Longitude
-
-var North = 37.17  //Latitude 
-var South = 37.099            //Latitude pr
-var East = -121.067          //Longitude
-var West =  -121.307           //Longitude
+var West = -119.74170684814453  //Longitude
+var North = 34.05607276338369  //Latitude 
+var East = -119.66754913330078  //Longitude
+var South = 34.00969645770158   //Latitude 
 
 
 var coords1 = '[[' + West + "," + North + '], ['+ West + "," + South + '], ['+ East + "," + South + '], ['+ East + "," + North + ']]';   
@@ -129,6 +125,9 @@ for (i=0;intervalEndDate < enddate;i=i+intervalLength) {
       case 'NDWI':
           var landsat8 = ee.ImageCollection('LANDSAT/' + landsatNum +'_L1T_8DAY_NDWI');
           break;
+      case 'Veg':
+          var landsat8 = ee.ImageCollection('LANDSAT/' + landsatNum +'_L1T');
+          break;
     }
 
   
@@ -153,6 +152,9 @@ for (i=0;intervalEndDate < enddate;i=i+intervalLength) {
     case 'NDWI':
         var NDWI_PALETTE = ['FFFFCC', '0066FF'];
         var map1 = median1.visualize({'bands': "NDWI", 'palette': NDWI_PALETTE});
+        break;
+    case 'Veg':
+        var map1 = median1.visualize({'bands': ['B5', 'B6', 'B2'], 'min': 5000, 'max': 18000});
         break;
   }
   //Generate file name for download
